@@ -1,3 +1,6 @@
+import { Suspense } from "react";
+import SlowComponent from "./components/SlowComponent";
+
 function App() {
   return (
     <main className="min-h-screen p-8">
@@ -8,6 +11,10 @@ function App() {
       <div className="mt-6 rounded-lg bg-slate-800 p-4 text-white">
         Tailwind is working ✅
       </div>
+
+      <Suspense fallback={<p>Loading slow content...</p>}>
+        <SlowComponent />
+      </Suspense>
     </main>
   );
 }
