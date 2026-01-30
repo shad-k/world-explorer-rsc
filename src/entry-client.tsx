@@ -6,6 +6,6 @@ import App from "./App.tsx";
 hydrateRoot(
   document.getElementById("root")!,
   <StrictMode>
-    <App />
+    <App mode={window.__RENDER_MODE__} />
   </StrictMode>,
 );

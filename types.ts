@@ -1,13 +1,20 @@
-export const Mode = {
+export const RenderMode = {
   STREAM: "stream",
   CSR: "csr",
   SSR: "ssr",
+  RSC: "rsc",
 } as const;
 
-export type Mode = (typeof Mode)[keyof typeof Mode];
+export type RenderMode = (typeof RenderMode)[keyof typeof RenderMode];
 
 export type RenderOptions = {
   htmlStart?: string;
   htmlEnd?: string;
-  mode?: Mode;
+  mode?: RenderMode;
 };
+
+declare global {
+  interface Window {
+    __RENDER_MODE__: RenderMode;
+  }
+}
