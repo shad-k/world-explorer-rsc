@@ -39,9 +39,10 @@ It doubles as an educational playground and a source of code snippets, timing di
 
 ## Commands
 
-- `npm run dev` — dev server (Express + Vite middleware) on **port 5173**, `tsx server/index.ts`
-- `npm run build` — builds client (`vite build`) then server (`tsc -p tsconfig.node.json`). RSC will add a server/client/RSC build split; update this script when wiring the plugin.
-- `npm start` — production server from `dist/`
+- `npm run dev` — dev server (Express + Vite middleware) on **port 5173**, runs `server/index.ts` under `tsx`
+- `npm run build` — `vite build`; `@vitejs/plugin-rsc` builds the three environments in one pass (`dist/client`, `dist/ssr`, `dist/rsc`) with a client manifest
+- `npm start` — production server: runs the same Express server under `tsx` (`NODE_ENV=production`), loading traditional render modules from TSX source and the RSC handler from `dist/rsc`
+- `npm run typecheck` — `tsc -b` (project refs). `tsconfig.runtime.json` is the config `tsx` uses at runtime for the automatic JSX transform
 - `npm run lint` — ESLint
 - `npm run format` — Prettier
 
