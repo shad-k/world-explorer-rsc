@@ -1,20 +1,10 @@
+// Canonical enum of rendering strategies. The active mode is derived from the
+// route (path-based routing), not a query param — see CLAUDE.md.
 export const RenderMode = {
-  STREAM: "stream",
   CSR: "csr",
   SSR: "ssr",
+  STREAM: "stream",
   RSC: "rsc",
 } as const;
 
 export type RenderMode = (typeof RenderMode)[keyof typeof RenderMode];
-
-export type RenderOptions = {
-  htmlStart?: string;
-  htmlEnd?: string;
-  mode?: RenderMode;
-};
-
-declare global {
-  interface Window {
-    __RENDER_MODE__: RenderMode;
-  }
-}
