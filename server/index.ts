@@ -7,7 +7,7 @@ import { resolveClientAssets } from "./assets";
 import type { ClientAssets } from "./assets";
 
 // The RSC entry's default export: a web-standard fetch handler.
-type RscHandler = (request: Request) => Promise<globalThis.Response>;
+type RscHandler = (request: globalThis.Request) => Promise<globalThis.Response>;
 
 const isProduction = process.env.NODE_ENV === "production";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -21,7 +21,10 @@ export interface RenderContext {
   transformHtml: (html: string) => Promise<string>;
 }
 
-export type RenderFn = (res: Response, ctx: RenderContext) => void | Promise<void>;
+export type RenderFn = (
+  res: Response,
+  ctx: RenderContext,
+) => void | Promise<void>;
 
 // Each page route maps to a server render module and its client entry. The mode
 // is derived from the route — there is no `?mode=` query param (see CLAUDE.md).
@@ -73,15 +76,24 @@ async function createServer() {
   // deliberate per-feature delays live in the data getters themselves.
   const api = express.Router();
   api.get("/countries", async (_req, res) => {
-    const { getCountries } = await loadServerModule(vite, "/src/shared/data/countries.ts");
+    const { getCountries } = await loadServerModule(
+      vite,
+      "/src/shared/data/countries.ts",
+    );
     res.json(await getCountries());
   });
   api.get("/cities", async (_req, res) => {
-    const { getCities } = await loadServerModule(vite, "/src/shared/data/cities.ts");
+    const { getCities } = await loadServerModule(
+      vite,
+      "/src/shared/data/cities.ts",
+    );
     res.json(await getCities());
   });
   api.get("/weather", async (_req, res) => {
-    const { getWeather } = await loadServerModule(vite, "/src/shared/data/weather.ts");
+    const { getWeather } = await loadServerModule(
+      vite,
+      "/src/shared/data/weather.ts",
+    );
     res.json(await getWeather());
   });
   app.use("/api", api);
@@ -112,10 +124,9 @@ async function createServer() {
     try {
       const url = new URL(req.originalUrl, `http://${req.headers.host}`);
 
-      const { render } = (await loadServerModule(
-        vite,
-        route.renderModule,
-      )) as { render: RenderFn };
+      const { render } = (await loadServerModule(vite, route.renderModule)) as {
+        render: RenderFn;
+      };
 
       const ctx: RenderContext = {
         url: url.toString(),
@@ -155,7 +166,7 @@ async function loadRscHandler(
     const mod = await rscEnv.runner.import("/src/pages/rsc/entry.rsc.tsx");
     return mod.default;
   }
-  const mod = await import(path.resolve(__dirname, "../rsc/index.js"));
+  const mod = await import(path.resolve(__dirname, "../dist/rsc/index.js"));
   return mod.default as RscHandler;
 }
 
@@ -178,7 +189,9 @@ async function toWebRequest(req: Request): Promise<globalThis.Request> {
   return new globalThis.Request(url, {
     method: req.method,
     headers,
-    body,
+    // Buffer is a Uint8Array at runtime (a valid request body); the lib types
+    // don't model that, hence the cast.
+    body: body as RequestInit["body"],
   });
 }
 
@@ -187,7 +200,9 @@ function sendWebResponse(res: Response, webResponse: globalThis.Response) {
   res.status(webResponse.status);
   webResponse.headers.forEach((value, key) => res.setHeader(key, value));
   if (webResponse.body) {
-    Readable.fromWeb(webResponse.body as Parameters<typeof Readable.fromWeb>[0]).pipe(res);
+    Readable.fromWeb(
+      webResponse.body as Parameters<typeof Readable.fromWeb>[0],
+    ).pipe(res);
   } else {
     res.end();
   }
@@ -199,9 +214,9 @@ async function loadServerModule(
   sourcePath: string,
 ) {
   if (vite) return vite.ssrLoadModule(sourcePath);
-  // Prod: map "/src/pages/csr/render.tsx" -> compiled "dist/server/pages/csr/render.js"
-  const rel = sourcePath.replace(/^\/src\//, "").replace(/\.tsx?$/, ".js");
-  return import(path.resolve(__dirname, rel));
+  // Prod: the server runs under tsx, so import the TSX source directly. Only the
+  // RSC pipeline needs a bundled build (it requires the react-server condition).
+  return import(path.resolve(__dirname, "..", sourcePath.replace(/^\//, "")));
 }
 
 createServer();

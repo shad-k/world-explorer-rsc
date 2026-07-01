@@ -7,9 +7,7 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-200">
       <div className="mx-auto max-w-5xl px-6 py-16">
-        <h1 className="text-4xl font-bold text-slate-100">
-          🌍 World Explorer
-        </h1>
+        <h1 className="text-4xl font-bold text-slate-100">🌍 World Explorer</h1>
         <p className="mt-1 text-lg text-sky-400">
           A React 19 rendering laboratory
         </p>

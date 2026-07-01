@@ -18,6 +18,9 @@ export async function render(res: Response, ctx: RenderContext) {
     transformHtml: ctx.transformHtml,
   });
 
-  res.status(200).set("Content-Type", "text/html").send(start + appHtml + end);
+  res
+    .status(200)
+    .set("Content-Type", "text/html")
+    .send(start + appHtml + end);
   timer.log("response sent");
 }

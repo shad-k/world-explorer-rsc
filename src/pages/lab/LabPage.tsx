@@ -105,11 +105,7 @@ export function LabPage() {
                       {r ? (r.error ? "—" : ms(r.total)) : "·"}
                     </td>
                     <td className="px-4 py-3 font-mono">
-                      {r
-                        ? r.error
-                          ? r.error
-                          : formatNumber(r.bytes)
-                        : "·"}
+                      {r ? (r.error ? r.error : formatNumber(r.bytes)) : "·"}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-400">
                       {m.tagline}

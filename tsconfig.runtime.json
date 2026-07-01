@@ -1,0 +1,14 @@
+{
+  "//": "Used by the tsx runtime (npm run dev / npm start). tsx applies these compilerOptions only to files matched by `include`, so this must cover both the server and the src render modules it imports. Typechecking is done separately via `tsc -b` (tsconfig.app/node).",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true
+  },
+  "include": ["server", "src", "types.ts"]
+}

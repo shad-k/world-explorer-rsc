@@ -53,7 +53,9 @@ export function PageShell({
             <span className="rounded bg-sky-500/20 px-2 py-1 font-mono text-sm font-bold text-sky-300">
               {info.label}
             </span>
-            <h1 className="text-2xl font-bold text-slate-100">{info.tagline}</h1>
+            <h1 className="text-2xl font-bold text-slate-100">
+              {info.tagline}
+            </h1>
           </div>
           <p className="mt-2 max-w-3xl text-sm text-slate-400">
             {info.description}

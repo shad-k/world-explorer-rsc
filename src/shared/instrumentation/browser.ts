@@ -20,7 +20,11 @@ function store(): BrowserTiming[] {
   return (window.__WE_TIMINGS__ ??= []);
 }
 
-export function logBrowser(mode: string, event: string, detail?: unknown): void {
+export function logBrowser(
+  mode: string,
+  event: string,
+  detail?: unknown,
+): void {
   if (typeof window === "undefined") return;
   const at = Math.round(performance.now());
   store().push({ mode, event, at });

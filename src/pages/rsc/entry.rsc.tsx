@@ -26,7 +26,8 @@ export default async function handler(request: Request): Promise<Response> {
   timer.log(`request received (${request.method})`);
 
   let returnValue: unknown;
-  let temporaryReferences: ReturnType<typeof createTemporaryReferenceSet> | undefined;
+  let temporaryReferences:
+    ReturnType<typeof createTemporaryReferenceSet> | undefined;
 
   const actionId = request.headers.get("x-rsc-action");
   if (actionId) {
@@ -38,7 +39,7 @@ export default async function handler(request: Request): Promise<Response> {
     temporaryReferences = createTemporaryReferenceSet();
     const args = await decodeReply(body, { temporaryReferences });
     const action = await loadServerAction(actionId);
-    returnValue = await action.apply(null, args);
+    returnValue = await action(...(args as unknown[]));
     timer.log(`server action ran: ${actionId}`);
   }
 
@@ -56,10 +57,9 @@ export default async function handler(request: Request): Promise<Response> {
   }
 
   // Full-page navigation: delegate to the SSR environment to produce HTML.
-  const ssr = await import.meta.viteRsc.loadModule<typeof import("./entry.ssr")>(
-    "ssr",
-    "index",
-  );
+  const ssr = await import.meta.viteRsc.loadModule<
+    typeof import("./entry.ssr")
+  >("ssr", "index");
   const htmlStream = await ssr.renderHtml(rscStream);
   timer.log("html stream handed off");
   return new Response(htmlStream, {

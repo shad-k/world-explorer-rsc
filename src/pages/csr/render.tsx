@@ -16,6 +16,9 @@ export async function render(res: Response, ctx: RenderContext) {
   });
 
   // No SSR output between start and end — the #root is empty.
-  res.status(200).set("Content-Type", "text/html").send(start + end);
+  res
+    .status(200)
+    .set("Content-Type", "text/html")
+    .send(start + end);
   timer.log("empty shell sent");
 }

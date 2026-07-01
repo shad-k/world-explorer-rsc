@@ -41,6 +41,9 @@ async function main() {
 
   function BrowserRoot() {
     const [payload, set] = useState(initialPayload);
+    // Expose the state setter so callServer can push a re-rendered tree. This
+    // module-level handoff is the documented RSC browser pattern.
+    // eslint-disable-next-line react-hooks/globals
     setPayload = set;
     return payload.root as ReactNode;
   }
