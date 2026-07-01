@@ -4,13 +4,20 @@ import path from "node:path";
 // Resolves the <script>/<link> tags for a client entry.
 //
 // In dev, Vite serves source modules directly, so the entry source path is used
-// verbatim (Vite compiles + injects CSS on import). In prod, we read the Vite
-// build manifest to map the entry to its hashed JS + CSS assets.
+// verbatim. The global stylesheet is linked in the <head> via Vite's `?direct`
+// query (which serves the compiled CSS as text/css) so first paint is styled —
+// otherwise CSS would only arrive when the entry's `import "./index.css"` runs,
+// causing a flash of unstyled content. In prod, we read the Vite build manifest
+// to map the entry to its hashed JS + CSS assets.
 
 export interface ClientAssets {
   scripts: string[];
   styles: string[];
 }
+
+// Every client entry imports this same global stylesheet, so linking it up front
+// covers all modes in dev.
+const DEV_GLOBAL_CSS = "/src/index.css?direct";
 
 let manifestCache: Record<string, ManifestChunk> | null = null;
 
@@ -32,8 +39,9 @@ export function resolveClientAssets(
   isProduction: boolean,
 ): ClientAssets {
   if (!isProduction) {
-    // Dev: Vite handles CSS injection when the entry module is imported.
-    return { scripts: [entry], styles: [] };
+    // Dev: link the compiled global CSS in <head> for a styled first paint; the
+    // entry's own `import "./index.css"` still drives HMR at runtime.
+    return { scripts: [entry], styles: [DEV_GLOBAL_CSS] };
   }
 
   const manifest = loadManifest();
