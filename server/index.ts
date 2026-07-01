@@ -1,9 +1,13 @@
-import express, { type Response } from "express";
+import express, { type Request, type Response } from "express";
 import path from "node:path";
+import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { createServer as createViteServer, type ViteDevServer } from "vite";
 import { resolveClientAssets } from "./assets";
 import type { ClientAssets } from "./assets";
+
+// The RSC entry's default export: a web-standard fetch handler.
+type RscHandler = (request: Request) => Promise<globalThis.Response>;
 
 const isProduction = process.env.NODE_ENV === "production";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -51,7 +55,6 @@ const ROUTES: Record<string, RouteConfig> = {
 
 async function createServer() {
   const app = express();
-  app.use(express.json());
 
   let vite: ViteDevServer | undefined;
 
@@ -82,6 +85,24 @@ async function createServer() {
     res.json(await getWeather());
   });
   app.use("/api", api);
+
+  // --- RSC route ------------------------------------------------------------
+  // React Server Components have their own pipeline (rsc -> ssr -> client
+  // environments), so we drive the RSC entry's fetch handler directly instead
+  // of the generic HTML shell. Handles GET (navigation + Flight fetch) and POST
+  // (Server Action calls).
+  app.all("/rsc", async (req, res, next) => {
+    try {
+      const handler = await loadRscHandler(vite);
+      const webRequest = await toWebRequest(req);
+      const webResponse = await handler(webRequest);
+      sendWebResponse(res, webResponse);
+    } catch (err) {
+      vite?.ssrFixStacktrace(err as Error);
+      console.error("RSC render error:", err);
+      next(err);
+    }
+  });
 
   // --- Page routes ----------------------------------------------------------
   app.get("*all", async (req, res, next) => {
@@ -120,6 +141,56 @@ async function createServer() {
       })\n`,
     );
   });
+}
+
+/** Loads the RSC entry's fetch handler from the `rsc` environment (dev) or build (prod). */
+async function loadRscHandler(
+  vite: ViteDevServer | undefined,
+): Promise<RscHandler> {
+  if (vite) {
+    // The rsc environment loads modules with the `react-server` condition.
+    const rscEnv = vite.environments.rsc as unknown as {
+      runner: { import: (id: string) => Promise<{ default: RscHandler }> };
+    };
+    const mod = await rscEnv.runner.import("/src/pages/rsc/entry.rsc.tsx");
+    return mod.default;
+  }
+  const mod = await import(path.resolve(__dirname, "../rsc/index.js"));
+  return mod.default as RscHandler;
+}
+
+/** Converts an Express request into a web-standard Request (body buffered for POST). */
+async function toWebRequest(req: Request): Promise<globalThis.Request> {
+  const url = `http://${req.headers.host}${req.originalUrl}`;
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (Array.isArray(value)) value.forEach((v) => headers.append(key, v));
+    else if (value) headers.set(key, value);
+  }
+
+  let body: Buffer | undefined;
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(chunk as Buffer);
+    body = Buffer.concat(chunks);
+  }
+
+  return new globalThis.Request(url, {
+    method: req.method,
+    headers,
+    body,
+  });
+}
+
+/** Pipes a web-standard Response back through the Express response. */
+function sendWebResponse(res: Response, webResponse: globalThis.Response) {
+  res.status(webResponse.status);
+  webResponse.headers.forEach((value, key) => res.setHeader(key, value));
+  if (webResponse.body) {
+    Readable.fromWeb(webResponse.body as Parameters<typeof Readable.fromWeb>[0]).pipe(res);
+  } else {
+    res.end();
+  }
 }
 
 /** Loads a server-side module: via Vite's module runner in dev, dynamic import in prod. */
