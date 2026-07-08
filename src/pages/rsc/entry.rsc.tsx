@@ -6,7 +6,8 @@ import {
   loadServerAction,
   renderToReadableStream,
 } from "@vitejs/plugin-rsc/rsc";
-import { Root } from "./Root";
+import { Root as ScopedRoot } from "./scoped/Root";
+import { Root as FullRoot } from "./full/Root";
 import { createRequestTimer } from "../../shared/instrumentation/server";
 import {
   readOrCreateSessionId,
@@ -16,10 +17,26 @@ import {
 
 // The payload streamed to both the SSR and browser environments. `root` is the
 // server-component tree; `returnValue` carries a Server Action's result back to
-// the caller.
+// the caller. `root` is omitted (undefined) for Server Action calls that don't
+// need the page re-rendered — see the handler below.
 export interface RscPayload {
   root: ReactNode;
   returnValue?: unknown;
+}
+
+// Two Server Action strategies live side by side under one entry so they can
+// be compared directly at /rsc vs /rsc/full-rerender:
+//   - /rsc               (scoped)  — favorites are client-side state; a toggle
+//     never re-renders <Root/> at all. See ./scoped/.
+//   - /rsc/full-rerender  (full)   — the naive default this plugin gives you
+//     out of the box: every Server Action call re-renders and re-serializes
+//     the ENTIRE tree, including Countries/Cities/Weather's unrelated,
+//     artificially slow fetches. See ./full/.
+// Both share the same session/persistence layer (session.ts,
+// favoritesStore.ts) — only how much of the tree a Server Action touches
+// differs.
+function isFullRerender(request: Request): boolean {
+  return new URL(request.url).pathname.startsWith("/rsc/full-rerender");
 }
 
 // The `rsc` environment entry. The plugin expects a default-exported request
@@ -27,7 +44,8 @@ export interface RscPayload {
 // to an RSC/Flight stream, and (3) either returns that stream directly (browser
 // Flight fetch) or delegates to the SSR environment for HTML.
 export default async function handler(request: Request): Promise<Response> {
-  const timer = createRequestTimer("rsc");
+  const fullRerender = isFullRerender(request);
+  const timer = createRequestTimer(fullRerender ? "rsc-full" : "rsc-scoped");
   timer.log(`request received (${request.method})`);
 
   // Server-owned state (favoritesStore) is scoped per-session. The session id
@@ -55,7 +73,15 @@ export default async function handler(request: Request): Promise<Response> {
       timer.log(`server action ran: ${actionId}`);
     }
 
-    const payload: RscPayload = { root: <Root />, returnValue };
+    // The full-rerender variant always re-renders <Root/>, even for actions —
+    // that's the entire point of the comparison. The scoped variant only
+    // renders it for real navigations; a favorite toggle there needs nothing
+    // more than its return value (see ./scoped/FavoritesContext.tsx).
+    const RootComponent = fullRerender ? FullRoot : ScopedRoot;
+    const payload: RscPayload = {
+      root: !fullRerender && actionId ? undefined : <RootComponent />,
+      returnValue,
+    };
     const rscStream = renderToReadableStream<RscPayload>(payload, {
       temporaryReferences,
     });

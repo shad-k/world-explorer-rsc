@@ -1,12 +1,13 @@
 "use client";
 
 import { useTransition } from "react";
-import { toggleFavorite } from "./actions";
+import { toggleFavorite } from "../actions";
 
-// A "use client" leaf embedded inside server components. This is the only part
-// of the countries section that ships JS to the browser. Clicking it invokes
-// the Server Action, which re-renders the server tree (updating the favorites
-// panel and every button's state) inside a transition.
+// A "use client" leaf. Unlike ../scoped/FavoriteButton.tsx, `active` is a
+// prop computed server-side (inside Countries, from listFavorites()) — there
+// is no client-side favorites state here at all. Clicking invokes the Server
+// Action and waits for the ENTIRE <Root/> to re-render before this button (or
+// any other) reflects the change; see ../entry.rsc.tsx.
 export function FavoriteButton({
   code,
   active,

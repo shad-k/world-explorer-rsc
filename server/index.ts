@@ -102,8 +102,10 @@ async function createServer() {
   // React Server Components have their own pipeline (rsc -> ssr -> client
   // environments), so we drive the RSC entry's fetch handler directly instead
   // of the generic HTML shell. Handles GET (navigation + Flight fetch) and POST
-  // (Server Action calls).
-  app.all("/rsc", async (req, res, next) => {
+  // (Server Action calls). /rsc/full-rerender is a sibling page (same handler,
+  // same build) demonstrating the naive full-tree re-render strategy side by
+  // side with /rsc's scoped one — see src/pages/rsc/entry.rsc.tsx.
+  app.all(["/rsc", "/rsc/full-rerender"], async (req, res, next) => {
     try {
       const handler = await loadRscHandler(vite);
       const webRequest = await toWebRequest(req);

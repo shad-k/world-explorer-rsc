@@ -1,9 +1,11 @@
-import { listFavorites } from "./favoritesStore";
-import { countries } from "../../shared/data/countries";
+import { listFavorites } from "../favoritesStore";
+import { countries } from "../../../shared/data/countries";
 
-// Server Component that reflects server-owned state. It re-renders (via the
-// streamed RSC payload) whenever the toggleFavorite Server Action mutates the
-// store — no client state, no API call.
+// Server Component that reflects server-owned state directly — no client
+// state, no API call. It only updates when the WHOLE <Root/> is re-rendered
+// and re-streamed, which is exactly what makes this variant slow: see
+// ../entry.rsc.tsx (this Root is re-rendered on every Server Action call) and
+// compare with ../scoped/Favorites.tsx.
 export function Favorites() {
   const favorites = listFavorites();
   const names = favorites
@@ -15,7 +17,7 @@ export function Favorites() {
       <h2 className="text-sm font-semibold text-amber-300">
         ★ Favorites{" "}
         <span className="font-normal text-slate-500">
-          (server state, updated by a Server Action)
+          (server state, updated by a full-tree Server Action re-render)
         </span>
       </h2>
       {names.length === 0 ? (

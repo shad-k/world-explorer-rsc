@@ -28,7 +28,11 @@ async function callServer(id: string, args: unknown[]): Promise<unknown> {
     }),
     { temporaryReferences },
   );
-  startTransition(() => setPayload(payload));
+  // Action calls that don't touch the page tree omit `root` entirely (see
+  // entry.rsc.tsx) — skip applying it rather than blanking the page.
+  if (payload.root !== undefined) {
+    startTransition(() => setPayload(payload));
+  }
   return payload.returnValue;
 }
 setServerCallback(callServer);
